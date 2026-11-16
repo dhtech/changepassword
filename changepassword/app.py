@@ -104,6 +104,8 @@ def create_app(directory=None, otp=None, audit=None, config: dict | None = None,
         # how long a new password is: a range, each one somewhere in it
         LENGTH=env('CHANGEPASSWORD_LENGTH', '40-50'),
         AUDIT=env('CHANGEPASSWORD_AUDIT', ''),
+        # this page's own address, for the message to Discord ("... via <it>")
+        URL=env('CHANGEPASSWORD_URL', ''),
         # a file holding the Discord webhook to tell (none: nobody is told)
         DISCORD_FILE=env('CHANGEPASSWORD_DISCORD_FILE', ''),
         KEY_FILE=env('CHANGEPASSWORD_KEY_FILE', ''),
@@ -113,6 +115,9 @@ def create_app(directory=None, otp=None, audit=None, config: dict | None = None,
         ADDRESS_HEADER=env('CHANGEPASSWORD_ADDRESS_HEADER', 'X-Real-IP'),
     )
     app.config.update(config or {})
+    if app.config['URL'] and not re.fullmatch(r'https?://[A-Za-z0-9.:\[\]-]+(/[^\s<>]*)?',
+                                              app.config['URL']):
+        raise RuntimeError('CHANGEPASSWORD_URL is %r: not an address' % app.config['URL'])
     if app.config['LINK_LIFE'] not in LIFE_WORDS:
         raise RuntimeError('CHANGEPASSWORD_LINK_LIFE is %r: the link service knows %s seconds'
                            % (app.config['LINK_LIFE'], ', '.join(map(str, sorted(LIFE_WORDS)))))
@@ -193,12 +198,14 @@ def create_app(directory=None, otp=None, audit=None, config: dict | None = None,
                      outcome=outcome, detail=detail, link=link)
         app.logger.warning('%s: the password of %s, by %s from %s%s', outcome, target,
                            username(), address(), ' (%s)' % detail if detail else '')
+        # which page it was done on: <...> keeps Discord from unfolding the link
+        via = ' via <%s>' % app.config['URL'] if app.config['URL'] else ''
         if outcome == 'changed':
-            words = '**%s** changed the password of **%s** (from %s)' % (
-                username(), target, address())
+            words = '**%s** changed the password of **%s** (from %s)%s' % (
+                username(), target, address(), via)
         else:
-            words = 'FAILED: **%s** tried to change the password of **%s** (from %s): %s' % (
-                username(), target, address(), detail)
+            words = 'FAILED: **%s** tried to change the password of **%s** (from %s)%s: %s' % (
+                username(), target, address(), via, detail)
         if not notify.send(words) and notify.webhook() is not None:
             app.logger.error('Discord was not told (%s: %s)', outcome, target)
 

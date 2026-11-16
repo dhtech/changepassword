@@ -52,6 +52,7 @@ It does not need to read anybody's hash.
 | `CHANGEPASSWORD_LINK_LIFE` | seconds an unopened link lives: 3600, 86400 (default) or 604800 |
 | `CHANGEPASSWORD_LENGTH` | how long a new password is: a range, default `40-50` - each password gets a random length in it, so they are not all the same length. At least 20, at most 128; one number means a fixed length |
 | `CHANGEPASSWORD_AUDIT` | the log file |
+| `CHANGEPASSWORD_URL` | this page's own address (optional): the Discord message then ends "... via <address>", so the channel says which page a change was made on |
 | `CHANGEPASSWORD_DISCORD_FILE` | a file holding a Discord webhook address (optional; read for every message) |
 | `CHANGEPASSWORD_KEY_FILE` | a file with at least 32 random bytes: what the tickets are signed with |
 | `CHANGEPASSWORD_TIMEZONE`, `CHANGEPASSWORD_TITLE` | for the pages |

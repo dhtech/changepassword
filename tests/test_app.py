@@ -219,6 +219,29 @@ def test_discord_is_told_who_and_whose_and_nothing_secret(world):
     assert len(world.notify.said) == 2
 
 
+def test_discord_is_told_which_page_when_the_page_knows_its_address(world, tmp_path):
+    app = create_app(world.directory, world.otp, Audit(str(tmp_path / 'c.log')),
+                     {'TESTING': True, 'URL': 'https://changepassword.example'},
+                     notify=world.notify)
+    client = app.test_client()
+
+    def change():
+        page = client.post('/find', headers=ME, data={'uid': 'bob'}).get_data(as_text=True)
+        return client.post('/change', headers=ME, data={
+            'ticket': re.search(r'name="ticket" value="([^"]+)"', page).group(1)})
+    change()
+    assert world.notify.said[-1] == ('**alice** changed the password of **bob** '
+                                     '(from 192.0.2.13) via <https://changepassword.example>')
+    world.directory.refuses = True
+    change()
+    assert world.notify.said[-1] == (
+        'FAILED: **alice** tried to change the password of **bob** (from 192.0.2.13) '
+        'via <https://changepassword.example>: the directory did not take the password')
+    with pytest.raises(RuntimeError, match='CHANGEPASSWORD_URL'):
+        create_app(world.directory, world.otp, world.audit, {'URL': 'not an address'},
+                   notify=world.notify)
+
+
 def test_a_discord_that_does_not_answer_stops_nothing(world):
     world.notify.answers = False
     got = world.client.post('/change', headers=ME, data={'ticket': ticket(world)})
