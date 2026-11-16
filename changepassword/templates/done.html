@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block main %}
+    <section class="card">
+      <h1>Changed</h1>
+      <p class="found">
+        <span class="label">The new password of</span>
+        <strong class="value">{{ person.uid }}</strong>
+        <span class="label">is behind this link</span>
+      </p>
+      <div class="act first">
+        <label for="link">One-time link</label>
+        <input type="text" id="link" value="{{ link }}" readonly>
+        <div class="buttons">
+          <button type="button" id="copy" class="primary">Copy the link</button>
+        </div>
+        <p id="copied" class="notice good" hidden>Copied.</p>
+      </div>
+      <ul class="rules">
+        <li>The link shows the password <strong>once</strong>. Do not open it yourself - give it to {{ person.uid }}.</li>
+        <li>Unopened, it is gone after {{ life }}.</li>
+        <li>This page is the only place the link is shown. Leave it and the link is lost; change the password again to get a new one.</li>
+      </ul>
+      <p><a href="{{ url_for('index') }}">Change another password</a></p>
+    </section>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

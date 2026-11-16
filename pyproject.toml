@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "changepassword"
+description = "Give somebody in the directory a new random password, handed over as a one-time link"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.11"
+dynamic = ["version"]
+dependencies = [
+    "flask>=3.0",
+    "ldap3>=2.9",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+Source = "https://github.com/dhtech/changepassword"
+
+[tool.setuptools]
+packages = ["changepassword"]
+
+[tool.setuptools.package-data]
+changepassword = ["templates/*.html", "static/*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "changepassword.__version__"}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

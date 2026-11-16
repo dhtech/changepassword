@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Log - {{ title }}{% endblock %}
+{% block main %}
+    <section class="card wide">
+      <h1>Log</h1>
+      <p class="totals">Every attempt to change a password here, newest first.</p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>When</th><th>Who</th><th>Whose password</th><th>Outcome</th><th>From</th><th>Link id</th></tr>
+          </thead>
+          <tbody>
+            {% for entry in entries %}
+            <tr class="state-{{ 'ok' if entry.outcome == 'changed' else 'problem' }}">
+              <td>{{ entry.at|when }}</td>
+              <td>{{ entry.changer }}</td>
+              <td class="value">{{ entry.target }}</td>
+              <td class="wrap"><span class="state">{{ entry.outcome }}</span>{% if entry.detail %}: {{ entry.detail }}{% endif %}</td>
+              <td class="value">{{ entry.address }}</td>
+              <td class="value">{{ entry.link }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6">Nobody has changed a password here yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+{% endblock %}

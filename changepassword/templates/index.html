@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block main %}
+    <section class="card">
+      <h1>Whose password?</h1>
+      <p class="totals">The person gets a new random password of {{ length }} characters.
+        You get a link that shows it <strong>once</strong>; hand the link to the person.</p>
+      {% if problem %}<p class="notice problem">{{ problem }}</p>{% endif %}
+      <form class="act first" method="post" action="{{ url_for('find') }}">
+        <label for="uid">Username</label>
+        <input type="text" id="uid" name="uid" value="{{ asked or '' }}" maxlength="64"
+               autocomplete="off" autocapitalize="none" spellcheck="false" autofocus required>
+        <div class="buttons">
+          <button type="submit" class="primary">Find</button>
+        </div>
+      </form>
+    </section>
+{% endblock %}

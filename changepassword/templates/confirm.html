@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block main %}
+    <section class="card">
+      <h1>Change this password?</h1>
+      <p class="found">
+        <span class="label">The person</span>
+        <strong class="value">{{ person.uid }}</strong>
+        {% if person.name %}<span class="label">{{ person.name }}</span>{% endif %}
+      </p>
+      <p class="notice warning">The password {{ person.uid }} has now stops working at once.
+        It cannot be undone, only changed again.</p>
+      <form class="act" method="post" action="{{ url_for('change') }}">
+        <input type="hidden" name="ticket" value="{{ ticket }}">
+        <div class="buttons">
+          <button type="submit" class="primary">Change the password of {{ person.uid }}</button>
+          <a class="button" href="{{ url_for('index') }}">No, somebody else</a>
+        </div>
+        <p class="hint">This question is good for {{ minutes }} minutes. It is written to the log that you changed it.</p>
+      </form>
+    </section>
+{% endblock %}
