@@ -7,7 +7,7 @@ import pytest
 
 pytest.importorskip('flask')
 
-from changepassword.app import ALPHABET, create_app  # noqa: E402
+from changepassword.app import ALPHABET, create_app, length_range, new_password  # noqa: E402
 from changepassword.audit import Audit  # noqa: E402
 from changepassword.directory import DirectoryError  # noqa: E402
 from changepassword.otp import OtpError  # noqa: E402
@@ -119,8 +119,9 @@ def test_a_change_end_to_end(world):
     assert got.status_code == 200
     (dn, password), = world.directory.set
     assert dn == BOB['dn']
-    # 40 random letters and digits, the same in the link service and the directory
-    assert len(password) == 40 and set(password) <= set(ALPHABET)
+    # random letters and digits, 40 to 50 of them, the same in the link
+    # service and the directory
+    assert 40 <= len(password) <= 50 and set(password) <= set(ALPHABET)
     assert world.otp.stored == [password]
     # the changer gets the link - never the password
     assert 'https://otp.example/#/s/id-1/THEKEY' in page and password not in page
@@ -241,5 +242,35 @@ def test_the_log_page(world):
 def test_the_settings_are_checked():
     with pytest.raises(RuntimeError, match='LINK_LIFE'):
         create_app(Directory(), Otp(), Audit('/dev/null'), {'LINK_LIFE': 1234})
-    with pytest.raises(RuntimeError, match='at least 20'):
-        create_app(Directory(), Otp(), Audit('/dev/null'), {'LENGTH': 8})
+    for bad, why in (('8', 'at least 20'), ('8-40', 'at least 20'), ('50-40', 'shortest first'),
+                     ('40-500', 'at most 128'), ('forty', 'a range like'), ('40-', None)):
+        if why is None:
+            assert length_range(bad) == (40, 40)
+            continue
+        with pytest.raises(RuntimeError, match=why):
+            create_app(Directory(), Otp(), Audit('/dev/null'), {'LENGTH': bad})
+
+
+# --- the length -------------------------------------------------------------
+
+def test_the_length_is_a_range_and_passwords_differ_in_length():
+    assert length_range('40-50') == (40, 50) and length_range(' 24-24 ') == (24, 24)
+    # one number is a fixed length (an integer too: an older setting)
+    assert length_range('40') == (40, 40) and length_range(40) == (40, 40)
+    lengths = {len(new_password(40, 50)) for _ in range(2000)}
+    # every length of the range comes up, and nothing outside it
+    assert lengths == set(range(40, 51))
+    assert {len(new_password(30)) for _ in range(50)} == {30}
+
+
+def test_the_page_says_the_range_and_changes_use_it(world, tmp_path):
+    assert '40 to 50 characters' in world.client.get('/', headers=ME).get_data(as_text=True)
+    app = create_app(world.directory, world.otp, Audit(str(tmp_path / 'b.log')),
+                     {'TESTING': True, 'LENGTH': '20-21'}, notify=world.notify)
+    client = app.test_client()
+    assert '20 to 21 characters' in client.get('/', headers=ME).get_data(as_text=True)
+    for _ in range(40):
+        page = client.post('/find', headers=ME, data={'uid': 'bob'}).get_data(as_text=True)
+        client.post('/change', headers=ME, data={
+            'ticket': re.search(r'name="ticket" value="([^"]+)"', page).group(1)})
+    assert {len(p) for p in world.otp.stored} == {20, 21}

@@ -6,7 +6,8 @@ choosing or seeing it.
 An authorised person opens the page, names a user and confirms. The
 program then
 
-1. makes a random password (40 letters and digits by default),
+1. makes a random password (letters and digits, 40 to 50 of them by
+   default - the length is random too),
 2. encrypts it and puts it into a one-time link service
    ([Yopass](https://github.com/jhaals/yopass)) - the service keeps
    ciphertext only, the key is in the link,
@@ -49,7 +50,7 @@ It does not need to read anybody's hash.
 | `CHANGEPASSWORD_OTP_API` | where links are made (Yopass's API) |
 | `CHANGEPASSWORD_OTP_URL` | where people open links |
 | `CHANGEPASSWORD_LINK_LIFE` | seconds an unopened link lives: 3600, 86400 (default) or 604800 |
-| `CHANGEPASSWORD_LENGTH` | the password's length (default 40, at least 20) |
+| `CHANGEPASSWORD_LENGTH` | how long a new password is: a range, default `40-50` - each password gets a random length in it, so they are not all the same length. At least 20, at most 128; one number means a fixed length |
 | `CHANGEPASSWORD_AUDIT` | the log file |
 | `CHANGEPASSWORD_DISCORD_FILE` | a file holding a Discord webhook address (optional; read for every message) |
 | `CHANGEPASSWORD_KEY_FILE` | a file with at least 32 random bytes: what the tickets are signed with |

@@ -18,7 +18,8 @@ only and believes those headers - and refuses every page without a
 name. /healthz is the one exception: it tells nothing but "ok".
 
 WHAT A CHANGE IS. The new password is made here (random letters and
-digits), never typed and never shown: it is put into the one-time link
+digits, of a random length within a range), never typed and never
+shown: it is put into the one-time link
 service first, then into the directory, and what the changer gets is
 the link. Nothing is changed unless both worked, in that order - a
 link whose password never reached the directory is useless and dies by
@@ -58,8 +59,29 @@ _OPEN = ('healthz', 'static')      # endpoints without a login
 LIFE_WORDS = {3600: '1 hour', 86400: '1 day', 604800: '1 week'}
 
 
-def new_password(length: int) -> str:
+def new_password(shortest: int, longest: int | None = None) -> str:
+    """Random letters and digits; the length is random too, anywhere
+    from SHORTEST to LONGEST, so that not every password is as long as
+    the next."""
+    longest = shortest if longest is None else longest
+    length = shortest + random_source.randbelow(longest - shortest + 1)
     return ''.join(random_source.choice(ALPHABET) for _ in range(length))
+
+
+def length_range(value) -> tuple[int, int]:
+    """(shortest, longest) from the setting: a range "40-50", or one
+    number for a fixed length."""
+    text = str(value).strip()
+    low, _, high = text.partition('-')
+    try:
+        shortest, longest = int(low), int(high or low)
+    except ValueError:
+        raise RuntimeError('CHANGEPASSWORD_LENGTH is %r: a range like 40-50' % text)
+    if shortest < 20:
+        raise RuntimeError('CHANGEPASSWORD_LENGTH is %s: at least 20' % text)
+    if not shortest <= longest <= 128:
+        raise RuntimeError('CHANGEPASSWORD_LENGTH is %s: the shortest first, at most 128' % text)
+    return shortest, longest
 
 
 def create_app(directory=None, otp=None, audit=None, config: dict | None = None,
@@ -79,7 +101,8 @@ def create_app(directory=None, otp=None, audit=None, config: dict | None = None,
         OTP_API=env('CHANGEPASSWORD_OTP_API', ''),
         OTP_URL=env('CHANGEPASSWORD_OTP_URL', ''),
         LINK_LIFE=int(env('CHANGEPASSWORD_LINK_LIFE', '86400')),
-        LENGTH=int(env('CHANGEPASSWORD_LENGTH', '40')),
+        # how long a new password is: a range, each one somewhere in it
+        LENGTH=env('CHANGEPASSWORD_LENGTH', '40-50'),
         AUDIT=env('CHANGEPASSWORD_AUDIT', ''),
         # a file holding the Discord webhook to tell (none: nobody is told)
         DISCORD_FILE=env('CHANGEPASSWORD_DISCORD_FILE', ''),
@@ -93,8 +116,7 @@ def create_app(directory=None, otp=None, audit=None, config: dict | None = None,
     if app.config['LINK_LIFE'] not in LIFE_WORDS:
         raise RuntimeError('CHANGEPASSWORD_LINK_LIFE is %r: the link service knows %s seconds'
                            % (app.config['LINK_LIFE'], ', '.join(map(str, sorted(LIFE_WORDS)))))
-    if app.config['LENGTH'] < 20:
-        raise RuntimeError('CHANGEPASSWORD_LENGTH is %d: at least 20' % app.config['LENGTH'])
+    shortest, longest = length_range(app.config['LENGTH'])
 
     if directory is None:
         from .directory import Directory
@@ -152,7 +174,7 @@ def create_app(directory=None, otp=None, audit=None, config: dict | None = None,
     def common():
         return {'title': app.config['TITLE'], 'version': __version__,
                 'timezone': app.config['TIMEZONE'], 'user': username(), 'life': life,
-                'length': app.config['LENGTH']}
+                'length': str(shortest) if shortest == longest else '%d to %d' % (shortest, longest)}
 
     @app.after_request
     def headers(response):
@@ -231,7 +253,7 @@ def create_app(directory=None, otp=None, audit=None, config: dict | None = None,
             note(target, 'failed', 'the person is not there any more')
             abort(409, 'The directory no longer has %s as it was found. Nothing was changed.'
                   % target)
-        password = new_password(app.config['LENGTH'])
+        password = new_password(shortest, longest)
         try:
             link, link_id = otp.store(password)
         except OtpError as exc:
